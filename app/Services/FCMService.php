@@ -30,14 +30,30 @@ class FCMService
     private function getAccessToken()
     {
         try {
-            if (!file_exists($this->serviceAccountPath)) {
-                Log::error('FCM: Service account file not found', ['path' => $this->serviceAccountPath]);
+            // Try to get credentials from base64 env variable first (for Laravel Cloud)
+            $credentialsJson = null;
+            
+            if (env('FIREBASE_CREDENTIALS')) {
+                // Decode base64 credentials
+                $credentialsJson = json_decode(base64_decode(env('FIREBASE_CREDENTIALS')), true);
+                Log::info('FCM: Using credentials from FIREBASE_CREDENTIALS env variable');
+            } elseif (file_exists($this->serviceAccountPath)) {
+                // Fallback to file-based credentials (for local)
+                $credentialsJson = json_decode(file_get_contents($this->serviceAccountPath), true);
+                Log::info('FCM: Using credentials from file', ['path' => $this->serviceAccountPath]);
+            } else {
+                Log::error('FCM: No credentials found (neither env var nor file)', ['path' => $this->serviceAccountPath]);
+                return null;
+            }
+
+            if (!$credentialsJson) {
+                Log::error('FCM: Failed to decode credentials');
                 return null;
             }
 
             $credentials = new ServiceAccountCredentials(
                 'https://www.googleapis.com/auth/firebase.messaging',
-                json_decode(file_get_contents($this->serviceAccountPath), true)
+                $credentialsJson
             );
 
             $token = $credentials->fetchAuthToken();
