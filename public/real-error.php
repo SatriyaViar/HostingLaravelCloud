@@ -12,40 +12,78 @@ error_reporting(E_ALL);
 header('Content-Type: application/json');
 
 function captureError() {
+    $steps = [];
+    
     try {
         $laravelRoot = dirname(__DIR__);
+        $steps[] = 'Starting';
         
         // Load composer
         require $laravelRoot . '/vendor/autoload.php';
+        $steps[] = 'Composer loaded';
         
         // Load Laravel
         $app = require $laravelRoot . '/bootstrap/app.php';
+        $steps[] = 'Laravel app loaded';
         
-        // Create request
-        $request = Illuminate\Http\Request::create('/api/test', 'GET');
-        $request->headers->set('Accept', 'application/json');
+        // Check if routes are loaded
+        $router = $app->make('router');
+        $routes = $router->getRoutes();
+        $steps[] = 'Routes count: ' . $routes->count();
         
-        // Get kernel
-        $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+        // Find api/test route
+        $apiTestRoute = $routes->getByName('api.test') ?? $routes->getByAction('api/test');
+        $steps[] = 'API test route: ' . ($apiTestRoute ? 'found' : 'NOT FOUND');
         
-        // Handle request and capture response
-        $response = $kernel->handle($request);
+        // List all API routes
+        $apiRoutes = [];
+        foreach ($routes as $route) {
+            if (strpos($route->uri(), 'api/') === 0) {
+                $apiRoutes[] = $route->uri() . ' [' . implode(',', $route->methods()) . ']';
+            }
+        }
+        $steps[] = 'API routes found: ' . count($apiRoutes);
         
-        return [
-            'status' => 'success',
-            'response_status' => $response->getStatusCode(),
-            'response_content' => $response->getContent(),
-            'response_headers' => $response->headers->all(),
-        ];
+        // Try to get the route
+        try {
+            $request = Illuminate\Http\Request::create('/api/test', 'GET');
+            $request->headers->set('Accept', 'application/json');
+            $steps[] = 'Request created';
+            
+            // Get kernel
+            $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+            $steps[] = 'Kernel created';
+            
+            // Bootstrap kernel
+            $kernel->bootstrap();
+            $steps[] = 'Kernel bootstrapped';
+            
+            // Handle request
+            $response = $kernel->handle($request);
+            $steps[] = 'Response received: ' . $response->getStatusCode();
+            
+            return [
+                'status' => 'success',
+                'steps' => $steps,
+                'response_status' => $response->getStatusCode(),
+                'response_content' => $response->getContent(),
+                'api_routes' => array_slice($apiRoutes, 0, 10),
+            ];
+            
+        } catch (Throwable $e) {
+            $steps[] = 'Error during request handling';
+            throw $e;
+        }
         
     } catch (Throwable $e) {
         return [
             'status' => 'ERROR_CAUGHT',
+            'steps' => $steps,
             'error_class' => get_class($e),
             'message' => $e->getMessage(),
             'file' => $e->getFile(),
             'line' => $e->getLine(),
-            'trace' => array_slice(explode("\n", $e->getTraceAsString()), 0, 20),
+            'trace' => array_slice(explode("\n", $e->getTraceAsString()), 0, 15),
             'previous' => $e->getPrevious() ? [
                 'message' => $e->getPrevious()->getMessage(),
                 'file' => $e->getPrevious()->getFile(),
