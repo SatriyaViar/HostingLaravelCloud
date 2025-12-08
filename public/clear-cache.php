@@ -31,6 +31,22 @@ try {
         $results['config_cache'] = 'not found';
     }
     
+    // Clear services cache
+    if (file_exists($laravelRoot . '/bootstrap/cache/services.php')) {
+        unlink($laravelRoot . '/bootstrap/cache/services.php');
+        $results['services_cache'] = 'cleared';
+    } else {
+        $results['services_cache'] = 'not found';
+    }
+    
+    // Clear packages cache
+    if (file_exists($laravelRoot . '/bootstrap/cache/packages.php')) {
+        unlink($laravelRoot . '/bootstrap/cache/packages.php');
+        $results['packages_cache'] = 'cleared';
+    } else {
+        $results['packages_cache'] = 'not found';
+    }
+    
     // Clear route cache
     if (file_exists($laravelRoot . '/bootstrap/cache/routes-v7.php')) {
         unlink($laravelRoot . '/bootstrap/cache/routes-v7.php');
