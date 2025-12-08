@@ -27,6 +27,16 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // routes/api.php TEST
 Route::get('/test', fn() => response()->json(['message' => 'Laravel reachable!']));
 
+// Simple health check
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'healthy',
+        'timestamp' => now()->toDateTimeString(),
+        'app' => config('app.name'),
+        'env' => config('app.env')
+    ]);
+});
+
 // Diagnostic endpoint for Laravel Cloud
 Route::get('/test-db', function () {
     try {
