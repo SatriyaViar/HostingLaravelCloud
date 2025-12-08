@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\Route;
 class RouteServiceProvider extends ServiceProvider
 {
     /**
+     * The namespace for the application's controllers.
+     *
+     * @var string
+     */
+    protected $namespace = 'App\Http\Controllers';
+
+    /**
      * The path to your application's "home" route.
      *
      * Typically, users are redirected here after authentication.
