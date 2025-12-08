@@ -27,6 +27,17 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // routes/api.php TEST
 Route::get('/test', fn() => response()->json(['message' => 'Laravel reachable!']));
 
+// Ultra simple - raw PHP response
+Route::get('/ping', function () {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'status' => 'alive',
+        'timestamp' => date('Y-m-d H:i:s'),
+        'php' => PHP_VERSION
+    ]);
+    exit;
+});
+
 // Simple health check - no dependencies
 Route::get('/health', function () {
     try {
@@ -47,8 +58,13 @@ Route::get('/health', function () {
     }
 });
 
-// Debug endpoint for Laravel Cloud troubleshooting
+// Debug endpoint for Laravel Cloud troubleshooting - ALWAYS shows errors
 Route::get('/debug', function () {
+    // Override error handler to always show details
+    set_error_handler(function($errno, $errstr, $errfile, $errline) {
+        throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+    });
+    
     try {
         $info = [
             'status' => 'ok',
@@ -85,18 +101,38 @@ Route::get('/debug', function () {
             ];
         } catch (\Throwable $e) {
             $info['classes'] = [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ];
         }
 
+        // Test config loading
+        try {
+            $info['config_test'] = [
+                'app_name' => config('app.name'),
+                'can_load_config' => 'yes'
+            ];
+        } catch (\Throwable $e) {
+            $info['config_test'] = [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ];
+        }
+
+        restore_error_handler();
         return response()->json($info);
+        
     } catch (\Throwable $e) {
+        restore_error_handler();
         return response()->json([
-            'status' => 'error',
+            'status' => 'CRITICAL_ERROR',
             'message' => $e->getMessage(),
             'file' => $e->getFile(),
             'line' => $e->getLine(),
-            'trace' => explode("\n", $e->getTraceAsString())
+            'trace' => explode("\n", $e->getTraceAsString()),
+            'class' => get_class($e)
         ], 500);
     }
 });
