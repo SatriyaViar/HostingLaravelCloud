@@ -7,6 +7,12 @@ header('Content-Type: application/json');
 
 try {
     $laravelRoot = dirname(__DIR__);
+    
+    // Load composer and Laravel
+    require $laravelRoot . '/vendor/autoload.php';
+    $app = require $laravelRoot . '/bootstrap/app.php';
+    
+    // Get config WITHOUT booting (to avoid provider loading issues)
     $configFile = $laravelRoot . '/config/app.php';
     
     if (!file_exists($configFile)) {
@@ -14,27 +20,29 @@ try {
         exit;
     }
     
-    // Load config
-    $config = require $configFile;
+    // Read file content instead
+    $configContent = file_get_contents($configFile);
     
-    $providers = $config['providers'] ?? [];
+    // Extract providers array using regex
+    preg_match("/['\"](providers)['\"]\\s*=>\\s*\\[(.*?)\\]/s", $configContent, $matches);
     
-    // Filter App providers
-    $appProviders = array_values(array_filter($providers, function($p) {
-        return is_string($p) && strpos($p, 'App\\Providers\\') === 0;
-    }));
+    $providersString = $matches[2] ?? '';
+    preg_match_all("/App\\\\Providers\\\\(\\w+)::class/", $providersString, $providerMatches);
+    
+    $appProviders = array_map(function($name) {
+        return "App\\Providers\\$name";
+    }, $providerMatches[1] ?? []);
+    
+    $config = null;
     
     $info = [
         'config_file' => $configFile,
         'config_exists' => true,
-        'total_providers' => count($providers),
-        'app_providers' => $appProviders,
+        'app_providers_found' => $appProviders,
         'route_provider_in_config' => in_array('App\\Providers\\RouteServiceProvider', $appProviders),
     ];
     
     // Check if RouteServiceProvider class exists
-    require $laravelRoot . '/vendor/autoload.php';
-    
     $info['route_provider_class_exists'] = class_exists('App\\Providers\\RouteServiceProvider');
     
     if ($info['route_provider_class_exists']) {
