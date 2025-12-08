@@ -15,10 +15,18 @@ class QuizQuestion extends Model
         'order_number',
         'points',
         'explanation',
+        'is_bank_question',
+        'topic',
+        'difficulty_level',
+        'usage_count',
+        'last_used_at',
     ];
 
     protected $casts = [
         'points' => 'integer',
+        'is_bank_question' => 'boolean',
+        'usage_count' => 'integer',
+        'last_used_at' => 'datetime',
     ];
 
     public function quiz(): BelongsTo

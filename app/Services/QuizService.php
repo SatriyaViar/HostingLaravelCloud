@@ -43,7 +43,29 @@ class QuizService implements QuizServiceInterface
             throw new \Exception('Study Card not found', 404);
         }
 
-        // 2. Extract konten materi (text atau dari PDF)
+        $numQuestions = $options['num_questions'] ?? 5;
+        $useBank = $options['use_bank'] ?? true; // Default gunakan bank soal
+
+        // 2. Cek apakah ada cukup soal di bank soal untuk study card ini
+        if ($useBank) {
+            $bankQuestions = $this->getBankQuestions($studyCardId, $numQuestions);
+            
+            if (count($bankQuestions) >= $numQuestions) {
+                Log::info('Using questions from bank', [
+                    'study_card_id' => $studyCardId,
+                    'count' => count($bankQuestions)
+                ]);
+                return $this->createQuizFromBank($studyCard, $bankQuestions, $options);
+            }
+            
+            Log::info('Not enough bank questions, will generate new ones', [
+                'study_card_id' => $studyCardId,
+                'available' => count($bankQuestions),
+                'needed' => $numQuestions
+            ]);
+        }
+
+        // 3. Extract konten materi (text atau dari PDF)
         $materialContent = $this->extractMaterialContent($studyCard);
         
         if (empty(trim($materialContent))) {
@@ -53,8 +75,7 @@ class QuizService implements QuizServiceInterface
         // Limit text length untuk avoid token limit
         $materialContent = substr($materialContent, 0, 10000);
 
-        // 3. Siapkan prompt
-        $numQuestions = $options['num_questions'] ?? 5;
+        // 4. Siapkan prompt
         $prompt = "Generate a quiz with {$numQuestions} multiple-choice questions based on this material. 
 
 For each question, provide:
@@ -84,7 +105,7 @@ Return ONLY valid JSON in this exact format:
 
 Material:\n\n" . $materialContent;
 
-        // 4. Pilih AI provider (default: gemini)
+        // 5. Pilih AI provider (default: gemini)
         $aiProvider = config('ai.provider', 'gemini');
         
         try {
@@ -111,7 +132,7 @@ Material:\n\n" . $materialContent;
             return $this->generateDummyQuiz($studyCard, $numQuestions);
         }
 
-        // 5. Simpan quiz ke database
+        // 6. Simpan quiz ke database dengan soal sebagai bank soal
         $quiz = $this->repository->create([
             'study_card_id'        => $studyCardId,
             'title'                => $studyCard->title . ' - Quiz',
@@ -125,7 +146,7 @@ Material:\n\n" . $materialContent;
             'ai_model'             => $aiModel ?? 'unknown',
         ]);
 
-        // 6. Simpan questions dan answers
+        // 7. Simpan questions dan answers (sekaligus simpan ke bank soal)
         $questionOrder = 1;
         foreach ($questionsData as $questionData) {
             $question = $quiz->questions()->create([
@@ -134,6 +155,11 @@ Material:\n\n" . $materialContent;
                 'order_number'  => $questionOrder++,
                 'points'        => $questionData['points'] ?? 10,
                 'explanation'   => $questionData['explanation'] ?? null,
+                'is_bank_question' => true, // Tandai sebagai bank soal
+                'topic'         => $studyCard->title,
+                'difficulty_level' => 'medium', // Default medium
+                'usage_count'   => 1,
+                'last_used_at'  => now(),
             ]);
 
             // Acak urutan jawaban agar jawaban benar tidak selalu di posisi A
@@ -149,6 +175,88 @@ Material:\n\n" . $materialContent;
                 ]);
             }
         }
+
+        return $quiz->load('questions.answers');
+    }
+
+    /**
+     * Ambil soal dari bank soal untuk study card tertentu
+     */
+    private function getBankQuestions(int $studyCardId, int $limit): array
+    {
+        $studyCard = $this->studyCardRepository->findById($studyCardId);
+        
+        // Ambil soal dari bank yang terkait dengan study card yang sama
+        // Atau yang topiknya sama
+        $questions = \App\Models\QuizQuestion::where('is_bank_question', true)
+            ->where(function($query) use ($studyCard) {
+                $query->whereHas('quiz', function($q) use ($studyCard) {
+                    $q->where('study_card_id', $studyCard->id);
+                })
+                ->orWhere('topic', $studyCard->title);
+            })
+            ->with('answers')
+            ->orderBy('usage_count', 'asc') // Prioritas soal yang jarang dipakai
+            ->orderBy('last_used_at', 'asc')
+            ->limit($limit)
+            ->get()
+            ->toArray();
+
+        return $questions;
+    }
+
+    /**
+     * Buat quiz baru dari soal-soal yang ada di bank
+     */
+    private function createQuizFromBank(StudyCard $studyCard, array $bankQuestions, array $options = []): Quiz
+    {
+        // Buat quiz baru
+        $quiz = $this->repository->create([
+            'study_card_id'        => $studyCard->id,
+            'title'                => $studyCard->title . ' - Quiz',
+            'description'          => 'Quiz from question bank',
+            'total_questions'      => count($bankQuestions),
+            'duration_minutes'     => $options['duration_minutes'] ?? 30,
+            'shuffle_questions'    => true,
+            'shuffle_answers'      => true,
+            'show_correct_answers' => true,
+            'generated_by_ai'      => true,
+            'ai_model'             => 'bank', // Dari bank soal
+        ]);
+
+        // Copy soal dari bank ke quiz baru
+        $questionOrder = 1;
+        foreach ($bankQuestions as $bankQuestion) {
+            $question = $quiz->questions()->create([
+                'question_text' => $bankQuestion['question_text'],
+                'question_type' => $bankQuestion['question_type'],
+                'order_number'  => $questionOrder++,
+                'points'        => $bankQuestion['points'],
+                'explanation'   => $bankQuestion['explanation'],
+                'is_bank_question' => false, // Ini adalah instance quiz, bukan bank
+                'topic'         => $bankQuestion['topic'],
+                'difficulty_level' => $bankQuestion['difficulty_level'],
+            ]);
+
+            // Copy answers
+            $answerOrder = 1;
+            foreach ($bankQuestion['answers'] as $bankAnswer) {
+                $question->answers()->create([
+                    'answer_text'  => $bankAnswer['answer_text'],
+                    'is_correct'   => $bankAnswer['is_correct'],
+                    'order_number' => $answerOrder++,
+                ]);
+            }
+
+            // Update usage count di bank soal original
+            \App\Models\QuizQuestion::where('id', $bankQuestion['id'])->increment('usage_count');
+            \App\Models\QuizQuestion::where('id', $bankQuestion['id'])->update(['last_used_at' => now()]);
+        }
+
+        Log::info('Quiz created from bank', [
+            'quiz_id' => $quiz->id,
+            'questions_used' => count($bankQuestions)
+        ]);
 
         return $quiz->load('questions.answers');
     }
