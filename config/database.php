@@ -76,6 +76,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'laravel',
             'sslmode' => 'require',
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => true, // Fix prepared statement issue with connection pooling
+                PDO::ATTR_PERSISTENT => false, // Disable persistent connections
+            ],
         ],
 
         'sqlsrv' => [
