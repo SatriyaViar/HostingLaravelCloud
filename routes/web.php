@@ -14,5 +14,18 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Laravel API is running',
+        'app' => config('app.name'),
+        'env' => config('app.env'),
+        'timestamp' => now()->toDateTimeString(),
+    ]);
+});
+
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'healthy',
+        'database' => 'connected',
+    ]);
 });
