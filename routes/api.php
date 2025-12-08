@@ -27,14 +27,78 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // routes/api.php TEST
 Route::get('/test', fn() => response()->json(['message' => 'Laravel reachable!']));
 
-// Simple health check
+// Simple health check - no dependencies
 Route::get('/health', function () {
-    return response()->json([
-        'status' => 'healthy',
-        'timestamp' => now()->toDateTimeString(),
-        'app' => config('app.name'),
-        'env' => config('app.env')
-    ]);
+    try {
+        return response()->json([
+            'status' => 'healthy',
+            'timestamp' => date('Y-m-d H:i:s'),
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version()
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => explode("\n", $e->getTraceAsString())
+        ], 500);
+    }
+});
+
+// Debug endpoint for Laravel Cloud troubleshooting
+Route::get('/debug', function () {
+    try {
+        $info = [
+            'status' => 'ok',
+            'timestamp' => date('Y-m-d H:i:s'),
+            'environment' => [
+                'php_version' => PHP_VERSION,
+                'laravel_version' => app()->version(),
+                'app_env' => env('APP_ENV', 'not set'),
+                'app_debug' => env('APP_DEBUG', 'not set'),
+                'app_key_set' => env('APP_KEY') ? 'yes' : 'no',
+            ],
+            'paths' => [
+                'base' => base_path(),
+                'app' => app_path(),
+                'storage' => storage_path(),
+                'public' => public_path(),
+            ],
+            'composer' => [
+                'autoload_exists' => file_exists(base_path('vendor/autoload.php')),
+                'cached_exists' => file_exists(base_path('bootstrap/cache/packages.php')),
+            ],
+            'folders' => [
+                'app_exists' => is_dir(app_path()),
+                'app_http_exists' => is_dir(app_path('Http')),
+                'app_models_exists' => is_dir(app_path('Models')),
+            ]
+        ];
+
+        // Test class loading
+        try {
+            $info['classes'] = [
+                'User_exists' => class_exists('App\\Models\\User'),
+                'Kernel_exists' => class_exists('App\\Http\\Kernel'),
+            ];
+        } catch (\Throwable $e) {
+            $info['classes'] = [
+                'error' => $e->getMessage()
+            ];
+        }
+
+        return response()->json($info);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => explode("\n", $e->getTraceAsString())
+        ], 500);
+    }
 });
 
 // Diagnostic endpoint for Laravel Cloud

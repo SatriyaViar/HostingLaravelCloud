@@ -34,12 +34,15 @@ class Handler extends ExceptionHandler
     public function render($request, Throwable $e)
     {
         if ($request->is('api/*')) {
+            $debug = env('APP_DEBUG', false);
+            
             return response()->json([
                 'error' => true,
-                'message' => config('app.debug') ? $e->getMessage() : 'Server Error',
-                'file' => config('app.debug') ? $e->getFile() : null,
-                'line' => config('app.debug') ? $e->getLine() : null,
-                'trace' => config('app.debug') ? $e->getTraceAsString() : null,
+                'message' => $debug ? $e->getMessage() : 'Server Error',
+                'file' => $debug ? $e->getFile() : null,
+                'line' => $debug ? $e->getLine() : null,
+                'trace' => $debug ? explode("\n", $e->getTraceAsString()) : null,
+                'class' => $debug ? get_class($e) : null,
             ], 500);
         }
 
