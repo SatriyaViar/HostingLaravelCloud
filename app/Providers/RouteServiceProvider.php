@@ -11,13 +11,6 @@ use Illuminate\Support\Facades\Route;
 class RouteServiceProvider extends ServiceProvider
 {
     /**
-     * The namespace for the application's controllers.
-     *
-     * @var string
-     */
-    protected $namespace = 'App\Http\Controllers';
-
-    /**
      * The path to your application's "home" route.
      *
      * Typically, users are redirected here after authentication.
@@ -25,16 +18,6 @@ class RouteServiceProvider extends ServiceProvider
      * @var string
      */
     public const HOME = '/home';
-
-    /**
-     * Get the namespace for the application's controllers.
-     *
-     * @return string
-     */
-    public function getNamespace()
-    {
-        return $this->namespace;
-    }
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
