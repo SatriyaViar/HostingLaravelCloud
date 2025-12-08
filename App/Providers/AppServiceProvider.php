@@ -44,6 +44,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        // Explicitly set the application namespace
+        $this->app->setNamespace('App\\');
     }
 }
