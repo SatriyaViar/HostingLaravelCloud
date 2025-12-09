@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'mysql'),
+    'default' => env('DB_CONNECTION', 'pgsql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -74,7 +74,7 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'laravel',
+            'search_path' => 'public',
             'sslmode' => 'require',
             'options' => [
                 // Critical: Emulate prepares to avoid prepared statement issues with Supabase pooler
@@ -87,13 +87,6 @@ return [
                 PDO::ATTR_TIMEOUT => 5,
                 // Error mode for better debugging
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            ],
-            // Add statement to run after connection to handle pooler issues
-            'after_connect' => [
-                // Deallocate all prepared statements to prevent reuse from pool
-                "DEALLOCATE ALL",
-                // Set statement timeout to prevent long-running queries
-                "SET statement_timeout = '30s'",
             ],
         ],
 
