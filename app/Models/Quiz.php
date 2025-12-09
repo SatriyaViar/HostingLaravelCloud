@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\PostgresBooleanCast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Quiz extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, PostgresBooleanCast;
 
     protected $fillable = [
         'study_card_id',

@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\PostgresBooleanCast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class QuizQuestion extends Model
 {
+    use PostgresBooleanCast;
     protected $fillable = [
         'quiz_id',
         'question_text',
