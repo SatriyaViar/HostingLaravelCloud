@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\PostgresBooleanCast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class UserQuizAnswer extends Model
 {
-    use HasFactory;
+    use HasFactory, PostgresBooleanCast;
 
     protected $fillable = [
         'user_quiz_attempt_id',

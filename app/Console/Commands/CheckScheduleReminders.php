@@ -45,8 +45,9 @@ class CheckScheduleReminders extends Command
         // 1. Have reminder enabled
         // 2. Haven't been notified yet
         // 3. Start time is between now and (now + reminder_minutes)
-        $schedules = Schedule::where('has_reminder', true)
-            ->where('notification_sent', false)
+        // Use CAST for PostgreSQL boolean comparison with PDO emulate prepares
+        $schedules = Schedule::whereRaw('has_reminder = CAST(? AS BOOLEAN)', ['true'])
+            ->whereRaw('notification_sent = CAST(? AS BOOLEAN)', ['false'])
             ->where('date', '>=', $now->toDateString())
             ->get()
             ->filter(function ($schedule) use ($now) {
