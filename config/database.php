@@ -77,9 +77,23 @@ return [
             'search_path' => 'laravel',
             'sslmode' => 'require',
             'options' => [
-                PDO::ATTR_EMULATE_PREPARES => true, // Fix prepared statement issue with connection pooling
-                PDO::ATTR_PERSISTENT => false, // Disable persistent connections
-                PDO::ATTR_STRINGIFY_FETCHES => false, // Keep boolean as boolean, not string
+                // Critical: Emulate prepares to avoid prepared statement issues with Supabase pooler
+                PDO::ATTR_EMULATE_PREPARES => true,
+                // Never use persistent connections with connection pooler
+                PDO::ATTR_PERSISTENT => false,
+                // Don't stringify fetches to preserve data types
+                PDO::ATTR_STRINGIFY_FETCHES => false,
+                // Timeout to prevent hanging connections
+                PDO::ATTR_TIMEOUT => 5,
+                // Error mode for better debugging
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ],
+            // Add statement to run after connection to handle pooler issues
+            'after_connect' => [
+                // Deallocate all prepared statements to prevent reuse from pool
+                "DEALLOCATE ALL",
+                // Set statement timeout to prevent long-running queries
+                "SET statement_timeout = '30s'",
             ],
         ],
 

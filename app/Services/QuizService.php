@@ -133,9 +133,21 @@ Material:\n\n" . $materialContent;
                 'error' => $e->getMessage(),
             ]);
             
-            // Fallback: Generate dummy quiz jika API error
-            Log::info('Using fallback dummy quiz generation');
-            return $this->generateDummyQuiz($studyCard, $numQuestions);
+            // Fallback: Coba provider lain jika quota habis
+            if ($aiProvider === 'gemini' && str_contains($e->getMessage(), 'quota')) {
+                Log::warning('Gemini quota exceeded, trying DeepSeek as fallback');
+                try {
+                    $questionsData = $this->callDeepSeekAPI($prompt);
+                    $aiModel = 'deepseek';
+                } catch (\Exception $e2) {
+                    Log::error('DeepSeek fallback also failed', ['error' => $e2->getMessage()]);
+                    return $this->generateDummyQuiz($studyCard, $numQuestions);
+                }
+            } else {
+                // Fallback: Generate dummy quiz jika API error
+                Log::info('Using fallback dummy quiz generation');
+                return $this->generateDummyQuiz($studyCard, $numQuestions);
+            }
         }
 
         if (empty($questionsData)) {
