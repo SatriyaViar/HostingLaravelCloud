@@ -201,7 +201,8 @@ Material:\n\n" . $materialContent;
     private function getBankQuestions(int $studyCardId): array
     {
         // Ambil HANYA soal bank yang terkait langsung dengan study card ini
-        $questions = \App\Models\QuizQuestion::where('is_bank_question', true)
+        // Use explicit CAST untuk handle PDO emulate prepares di PostgreSQL
+        $questions = \App\Models\QuizQuestion::whereRaw('is_bank_question = CAST(? AS BOOLEAN)', ['true'])
             ->whereHas('quiz', function($q) use ($studyCardId) {
                 $q->where('study_card_id', $studyCardId);
             })

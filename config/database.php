@@ -79,6 +79,7 @@ return [
             'options' => [
                 PDO::ATTR_EMULATE_PREPARES => true, // Fix prepared statement issue with connection pooling
                 PDO::ATTR_PERSISTENT => false, // Disable persistent connections
+                PDO::ATTR_STRINGIFY_FETCHES => false, // Keep boolean as boolean, not string
             ],
         ],
 
