@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use App\Traits\PostgresBooleanCast;
+use App\Casts\PostgresBooleanCast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class UserQuizAnswer extends Model
 {
-    use HasFactory, PostgresBooleanCast;
+    use HasFactory;
 
     protected $fillable = [
         'user_quiz_attempt_id',
@@ -22,7 +22,7 @@ class UserQuizAnswer extends Model
     ];
 
     protected $casts = [
-        'is_correct' => 'boolean',
+        'is_correct' => PostgresBooleanCast::class,
         'points_earned' => 'integer',
         'answered_at' => 'datetime',
         'time_spent_seconds' => 'integer',

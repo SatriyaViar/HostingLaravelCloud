@@ -19,7 +19,7 @@ trait PostgresBooleanCast
             ->keys()
             ->toArray();
 
-        // Convert boolean to PostgreSQL-compatible string
+        // Convert boolean to PostgreSQL-compatible string for INSERT/UPDATE
         if (in_array($key, $booleanFields)) {
             if (is_bool($value)) {
                 $value = $value ? 'true' : 'false';

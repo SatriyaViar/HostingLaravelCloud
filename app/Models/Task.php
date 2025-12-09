@@ -3,14 +3,14 @@
 
 namespace App\Models;
 
-use App\Traits\PostgresBooleanCast;
+use App\Casts\PostgresBooleanCast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
-    use HasFactory, SoftDeletes, PostgresBooleanCast;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -24,7 +24,7 @@ class Task extends Model
 
     protected $casts = [
         'deadline' => 'datetime',
-        'is_completed' => 'boolean',
+        'is_completed' => PostgresBooleanCast::class,
     ];
 
     // Relationships

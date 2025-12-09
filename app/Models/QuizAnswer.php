@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use App\Traits\PostgresBooleanCast;
+use App\Casts\PostgresBooleanCast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QuizAnswer extends Model
 {
-    use PostgresBooleanCast;
     protected $fillable = [
         'quiz_question_id',
         'answer_text',
@@ -17,7 +16,7 @@ class QuizAnswer extends Model
     ];
 
     protected $casts = [
-        'is_correct' => 'boolean',
+        'is_correct' => PostgresBooleanCast::class,
     ];
 
     public function question(): BelongsTo

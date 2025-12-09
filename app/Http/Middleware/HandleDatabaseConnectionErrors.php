@@ -17,34 +17,70 @@ class HandleDatabaseConnectionErrors
      */
     public function handle(Request $request, Closure $next): Response
     {
-        try {
-            return $next($request);
-        } catch (\Illuminate\Database\QueryException $e) {
-            // Check if it's a prepared statement error from connection pooling
-            if ($this->isPreparedStatementError($e)) {
-                Log::warning('Prepared statement error detected, reconnecting...', [
-                    'error' => $e->getMessage(),
-                    'url' => $request->fullUrl(),
-                ]);
+        $maxRetries = 2;
+        $attempt = 0;
 
-                // Force disconnect and reconnect
-                DB::purge('pgsql');
-                DB::reconnect('pgsql');
-
-                // Retry the request once
-                try {
-                    return $next($request);
-                } catch (\Exception $retryException) {
-                    Log::error('Retry after reconnect failed', [
-                        'error' => $retryException->getMessage(),
+        while ($attempt < $maxRetries) {
+            try {
+                return $next($request);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Check if it's a prepared statement error from connection pooling
+                if ($this->isPreparedStatementError($e)) {
+                    $attempt++;
+                    
+                    Log::warning('Prepared statement error detected, reconnecting...', [
+                        'error' => $e->getMessage(),
+                        'url' => $request->fullUrl(),
+                        'attempt' => $attempt,
                     ]);
-                    throw $retryException;
-                }
-            }
 
-            // Re-throw if not a prepared statement error
-            throw $e;
+                    // Force disconnect and reconnect
+                    try {
+                        DB::purge('pgsql');
+                        // Clear all connections
+                        DB::disconnect('pgsql');
+                    } catch (\Exception $purgeException) {
+                        Log::warning('Error during purge', [
+                            'error' => $purgeException->getMessage(),
+                        ]);
+                    }
+
+                    // Wait a bit before reconnecting
+                    usleep(100000); // 0.1 second
+
+                    // Reconnect
+                    try {
+                        DB::reconnect('pgsql');
+                        
+                        // Verify connection is working
+                        DB::connection('pgsql')->getPdo();
+                    } catch (\Exception $reconnectException) {
+                        Log::error('Reconnect failed', [
+                            'error' => $reconnectException->getMessage(),
+                        ]);
+                        
+                        if ($attempt >= $maxRetries) {
+                            throw $e; // Throw original error if max retries reached
+                        }
+                        continue; // Try again
+                    }
+
+                    // If we've exhausted retries, throw the original error
+                    if ($attempt >= $maxRetries) {
+                        throw $e;
+                    }
+                    
+                    // Continue to retry
+                    continue;
+                }
+
+                // Re-throw if not a prepared statement error
+                throw $e;
+            }
         }
+
+        // Should never reach here, but just in case
+        throw new \RuntimeException('Max retries exceeded');
     }
 
     /**

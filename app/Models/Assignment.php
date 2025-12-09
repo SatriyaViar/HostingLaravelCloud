@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Traits\PostgresBooleanCast;
+use App\Casts\PostgresBooleanCast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 
 class Assignment extends Model
 {
-    use HasFactory, PostgresBooleanCast;
+    use HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -25,8 +25,8 @@ class Assignment extends Model
 
     protected $casts = [
         'deadline' => 'datetime',
-        'is_done' => 'boolean',
-        'has_reminder' => 'boolean',
+        'is_done' => PostgresBooleanCast::class,
+        'has_reminder' => PostgresBooleanCast::class,
         'reminder_minutes' => 'integer',
     ];
 

@@ -3,7 +3,7 @@
 
 namespace App\Models;
 
-use App\Traits\PostgresBooleanCast;
+use App\Casts\PostgresBooleanCast;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,7 +11,7 @@ use Carbon\Carbon;
 
 class Schedule extends Model
 {
-    use HasFactory, SoftDeletes, PostgresBooleanCast;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -35,11 +35,11 @@ class Schedule extends Model
 
     protected $casts = [
         'date' => 'date',
-        'has_reminder' => 'boolean',
-        'is_completed' => 'boolean',
+        'has_reminder' => PostgresBooleanCast::class,
+        'is_completed' => PostgresBooleanCast::class,
         'reminder_minutes' => 'integer',
-        'notification_sent' => 'boolean',
-        'is_done' => 'boolean',
+        'notification_sent' => PostgresBooleanCast::class,
+        'is_done' => PostgresBooleanCast::class,
         'deadline' => 'datetime',
     ];
 
@@ -92,12 +92,12 @@ class Schedule extends Model
 
     public function scopeCompleted($query)
     {
-        return $query->where('is_completed', true);
+        return $query->whereRaw('is_completed = CAST(? AS BOOLEAN)', ['true']);
     }
 
     public function scopeIncomplete($query)
     {
-        return $query->where('is_completed', false);
+        return $query->whereRaw('is_completed = CAST(? AS BOOLEAN)', ['false']);
     }
 
     public function scopeAssignments($query)
@@ -108,7 +108,7 @@ class Schedule extends Model
     public function scopePendingAssignments($query)
     {
         return $query->where('type', 'assignment')
-                     ->where('is_done', false);
+                     ->whereRaw('is_done = CAST(? AS BOOLEAN)', ['false']);
     }
 
     public function scopeWeeklyAssignments($query)
@@ -133,7 +133,7 @@ class Schedule extends Model
     {
         $query = self::forUser($userId)
             ->onDate($date)
-            ->where('is_completed', false);
+            ->whereRaw('is_completed = CAST(? AS BOOLEAN)', ['false']);
 
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);

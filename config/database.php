@@ -67,6 +67,8 @@ return [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
+            // IMPORTANT: Use port 5432 for direct connection, NOT 6543 (pooler)
+            // Supabase pooler (port 6543) doesn't support prepared statements well
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'laravel'),
             'username' => env('DB_USERNAME', 'root'),
@@ -74,17 +76,18 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            'search_path' => 'laravel',
             'sslmode' => 'require',
             'options' => [
-                // Critical: Emulate prepares to avoid prepared statement issues with Supabase pooler
+                // CRITICAL: Emulate prepares to avoid prepared statement issues with Supabase
+                // This MUST be true for Supabase connection pooler compatibility
                 PDO::ATTR_EMULATE_PREPARES => true,
                 // Never use persistent connections with connection pooler
                 PDO::ATTR_PERSISTENT => false,
                 // Don't stringify fetches to preserve data types
                 PDO::ATTR_STRINGIFY_FETCHES => false,
                 // Timeout to prevent hanging connections
-                PDO::ATTR_TIMEOUT => 5,
+                PDO::ATTR_TIMEOUT => 10,
                 // Error mode for better debugging
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             ],

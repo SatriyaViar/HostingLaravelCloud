@@ -3,11 +3,17 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Database\Connection;
+use App\Database\PostgresConnection;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Override PostgreSQL connection to use custom connection class for Supabase
+        Connection::resolverFor('pgsql', function ($connection, $database, $prefix, $config) {
+            return new PostgresConnection($connection, $database, $prefix, $config);
+        });
         // Study Card
         $this->app->bind(
             \App\Contracts\Repositories\StudyCardRepositoryInterface::class,

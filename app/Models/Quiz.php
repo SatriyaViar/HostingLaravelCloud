@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Traits\PostgresBooleanCast;
+use App\Casts\PostgresBooleanCast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Quiz extends Model
 {
-    use SoftDeletes, PostgresBooleanCast;
+    use SoftDeletes;
 
     protected $fillable = [
         'study_card_id',
@@ -26,10 +26,10 @@ class Quiz extends Model
     ];
 
     protected $casts = [
-        'shuffle_questions' => 'boolean',
-        'shuffle_answers' => 'boolean',
-        'show_correct_answers' => 'boolean',
-        'generated_by_ai' => 'boolean',
+        'shuffle_questions' => PostgresBooleanCast::class,
+        'shuffle_answers' => PostgresBooleanCast::class,
+        'show_correct_answers' => PostgresBooleanCast::class,
+        'generated_by_ai' => PostgresBooleanCast::class,
     ];
 
     public function studyCard(): BelongsTo

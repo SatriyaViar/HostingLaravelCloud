@@ -511,9 +511,9 @@ class ScheduleController extends Controller
             // Filter by status
             if ($request->has('status')) {
                 if ($request->status === 'pending') {
-                    $query->where('is_done', false);
+                    $query->whereRaw('is_done = CAST(? AS BOOLEAN)', ['false']);
                 } elseif ($request->status === 'done') {
-                    $query->where('is_done', true);
+                    $query->whereRaw('is_done = CAST(? AS BOOLEAN)', ['true']);
                 }
             }
 
@@ -586,7 +586,7 @@ class ScheduleController extends Controller
             $completedAssignments = Schedule::forUser($userId)
                 ->assignments()
                 ->whereBetween('deadline', [$startOfWeek, $endOfWeek])
-                ->where('is_done', true)
+                ->whereRaw('is_done = CAST(? AS BOOLEAN)', ['true'])
                 ->count();
 
             $percentage = $totalAssignments > 0 
@@ -626,21 +626,21 @@ class ScheduleController extends Controller
 
             $overdue = Schedule::forUser($userId)
                 ->assignments()
-                ->where('is_done', false)
+                ->whereRaw('is_done = CAST(? AS BOOLEAN)', ['false'])
                 ->where('deadline', '<', $now)
                 ->orderBy('deadline', 'asc')
                 ->get();
 
             $dueToday = Schedule::forUser($userId)
                 ->assignments()
-                ->where('is_done', false)
+                ->whereRaw('is_done = CAST(? AS BOOLEAN)', ['false'])
                 ->whereDate('deadline', $now->toDateString())
                 ->orderBy('deadline', 'asc')
                 ->get();
 
             $upcoming = Schedule::forUser($userId)
                 ->assignments()
-                ->where('is_done', false)
+                ->whereRaw('is_done = CAST(? AS BOOLEAN)', ['false'])
                 ->where('deadline', '>', $now->endOfDay())
                 ->orderBy('deadline', 'asc')
                 ->limit(10)
